@@ -32,6 +32,9 @@ class Config:
     twilio_token: str = ""
     twilio_from: str = ""
     sms_to: str = ""
+    ntfy_topic: str = ""
+    ntfy_server: str = "https://ntfy.sh"
+    ntfy_token: str = ""
     db_path: str = "data/trending.db"
     players_cache: str = "data/players.json"
 
@@ -55,4 +58,7 @@ class Config:
             twilio_token=e("TWILIO_AUTH_TOKEN", ""),
             twilio_from=e("TWILIO_FROM", ""),
             sms_to=e("SMS_TO", ""),
+            ntfy_topic=e("NTFY_TOPIC", ""),
+            ntfy_server=e("NTFY_SERVER", "https://ntfy.sh"),
+            ntfy_token=e("NTFY_TOKEN", ""),
         )

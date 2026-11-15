@@ -4,7 +4,7 @@ import time
 from . import db as database
 from .config import Config
 from .detector import find_surges, metrics
-from .notifier import build_notifier
+from .notifier import ConsoleNotifier, build_notifier
 from .sleeper import SleeperClient
 
 MAX_DELTA_AGE_MIN = 60  # don't show "since last check" if the last check was longer ago than this
@@ -67,7 +67,7 @@ def run_cycle(cfg: Config, client: SleeperClient, conn, notifier, now=None) -> i
         extra = len(surges) - len(top)
         if extra:
             lines.append(f"(+{extra} more)")
-        notifier.send("Sleeper trends:\n" + "\n".join(lines))  # one text per poll, not one per player
+        notifier.send("\n".join(lines), title="Sleeper trends")  # one message per poll
         for r in surges[len(top):]:
             print("  (not texted) " + line(cfg, client, r))
         for r in surges:
@@ -94,12 +94,24 @@ def cli() -> None:
     ap.add_argument("--once", action="store_true", help="poll once and exit (for cron)")
     ap.add_argument("--dry-run", action="store_true", help="print alerts instead of texting")
     ap.add_argument("--top", action="store_true", help="show current top movers and exit")
+    ap.add_argument("--test-notify", "--test-sms", dest="test_notify", action="store_true",
+                    help="send one sample notification through your configured notifier and exit")
     args = ap.parse_args()
 
     cfg = Config.from_env()
     client = SleeperClient(cfg.players_cache)
     if args.top:
         return show_top(cfg, client)
+    if args.test_notify:
+        notifier = build_notifier(cfg)
+        if isinstance(notifier, ConsoleNotifier):
+            print("No NTFY_TOPIC or complete Twilio settings in .env, so this only prints to the console.")
+        try:
+            notifier.send("DROP Sample Player (RB/XYZ): 16980 in 1h, 3.6x normal, +2400 vs 5m ago\n"
+                          "(sample alert, not real data)", title="Sleeper trends (test)")
+        except Exception as e:
+            raise SystemExit("Test failed: {}".format(e))
+        return
 
     conn = database.connect(cfg.db_path)
     notifier = build_notifier(cfg, args.dry_run)
