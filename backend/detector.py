@@ -1,41 +1,67 @@
-from __future__ import annotations
-
+import statistics
 from dataclasses import dataclass
+from typing import Dict, List, Optional
 
 from . import db
+
+MIN_MARKET_SAMPLE = 10  # players needed before we trust a market-wide activity estimate
 
 
 @dataclass
 class Row:
     player_id: str
     kind: str
-    count: int            # adds/drops in the short window
-    baseline_per_hr: float  # avg hourly rate over the rest of the long window
-    ratio: float          # count / max(baseline, 1)
-    delta: int | None     # change in short-window count since the previous poll
+    count: int               # adds/drops in the short window
+    baseline_per_hr: float   # player's usual hourly rate (an upper bound if baseline_is_bound)
+    raw_ratio: float         # count / max(baseline, 1)
+    ratio: float = 0.0       # raw_ratio divided by the market-wide factor
+    market_factor: float = 1.0
+    delta: Optional[int] = None          # change in short-window count since the previous poll
+    delta_minutes: Optional[int] = None  # how long ago that previous poll was
+    baseline_is_bound: bool = False      # player missing from the long list
 
 
-def metrics(kind, short: dict[str, int], long: dict[str, int], short_hours: int,
-            long_hours: int, prev: dict[str, int] | None = None) -> list[Row]:
-    """Score every player in the short-window list against their own recent baseline.
+def metrics(kind, short: Dict[str, int], long: Dict[str, int], short_hours: int,
+            long_hours: int, prev: Optional[Dict[str, int]] = None,
+            prev_age_min: Optional[float] = None) -> List[Row]:
+    """Score each player in the short-window list.
 
-    The long window includes the short one, so the 'usual' rate is
-    (long - short) / (long_hours - short_hours). A player missing from the long list
-    (outside the top N) is treated as brand new, i.e. baseline 0.
+    Baseline: (long - short) / (long_hours - short_hours) is the player's usual hourly rate.
+    Missing from the long top-N: their 24h count is at most the list's smallest entry, so that
+    gives an upper bound on their baseline. The ratio is then a conservative lower bound
+    instead of the old "baseline = 0" guess, which fired whenever a player merely slid off
+    the bottom of the 24h list.
+
+    Market factor: when everyone's count is ~3x their norm (waiver runs, Sunday morning,
+    Tuesday-night news cycle), that's platform traffic, not news. We divide every ratio by the
+    median ratio so only players moving *more than the market* stand out.
     """
     rest_hours = max(long_hours - short_hours, 1)
+    cutoff = min(long.values()) if long else 0
     rows = []
     for pid, c in short.items():
-        rest = max(long.get(pid, c) - c, 0)
-        baseline = rest / rest_hours
-        ratio = c / max(baseline, 1.0)
-        delta = None if prev is None else c - prev.get(pid, 0)
-        rows.append(Row(pid, kind, c, baseline, ratio, delta))
+        bound = pid not in long
+        long_count = cutoff if bound else long[pid]
+        baseline = max(long_count - c, 0) / rest_hours
+        raw = c / max(baseline, 1.0)
+        delta = delta_min = None
+        if prev is not None:
+            delta = c - prev.get(pid, 0)
+            if prev_age_min is not None:
+                delta_min = int(round(prev_age_min))
+        rows.append(Row(pid, kind, c, baseline, raw, delta=delta,
+                        delta_minutes=delta_min, baseline_is_bound=bound))
+
+    ref = [r.raw_ratio for r in rows if not r.baseline_is_bound]
+    market = max(statistics.median(ref), 1.0) if len(ref) >= MIN_MARKET_SAMPLE else 1.0
+    for r in rows:
+        r.market_factor = market
+        r.ratio = r.raw_ratio / market
     return sorted(rows, key=lambda r: r.count, reverse=True)
 
 
-def find_surges(conn, rows: list[Row], *, min_count: int, min_ratio: float,
-                cooldown_minutes: int, escalation: float, now: int) -> list[Row]:
+def find_surges(conn, rows: List[Row], *, min_count: int, min_ratio: float,
+                cooldown_minutes: int, escalation: float, now: int) -> List[Row]:
     out = []
     for r in rows:
         if r.count < min_count or r.ratio < min_ratio:

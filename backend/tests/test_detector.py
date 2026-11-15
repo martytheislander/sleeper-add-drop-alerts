@@ -5,8 +5,8 @@ NOW = 1_700_000_000
 KW = dict(min_count=50, min_ratio=3.0, cooldown_minutes=180, escalation=2.0, now=NOW)
 
 
-def rows(short, long, prev=None):
-    return metrics("add", short, long, 1, 24, prev)
+def rows(short, long, prev=None, prev_age_min=None):
+    return metrics("add", short, long, 1, 24, prev, prev_age_min)
 
 
 def test_surge_vs_baseline():
@@ -38,6 +38,8 @@ def test_delta_and_snapshots():
     conn = db.connect(":memory:")
     db.save_snapshot(conn, NOW - 300, "add", 1, {"p1": 40})
     prev = db.previous_snapshot(conn, "add", 1, NOW)
-    assert prev == {"p1": 40}
-    assert rows({"p1": 60}, {"p1": 60}, prev)[0].delta == 20
+    assert prev == (NOW - 300, {"p1": 40})
+    scored = rows({"p1": 60}, {"p1": 60}, prev[1], (NOW - prev[0]) / 60)[0]
+    assert scored.delta == 20
+    assert scored.delta_minutes == 5
     assert db.previous_snapshot(conn, "add", 1, NOW - 600) is None
