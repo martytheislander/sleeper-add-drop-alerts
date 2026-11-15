@@ -19,7 +19,7 @@ def _list(name: str, default: str = "") -> tuple[str, ...]:
 class Config:
     sport: str = "nfl"
     kinds: tuple[str, ...] = ("add", "drop")
-    poll_seconds: int = 300
+    poll_seconds: int = 30
     short_hours: int = 1
     long_hours: int = 24
     limit: int = 100
@@ -40,7 +40,7 @@ class Config:
         return cls(
             sport=e("SPORT", "nfl"),
             kinds=_list("ALERT_KINDS", "add,drop"),
-            poll_seconds=int(e("POLL_SECONDS", "300")),
+            poll_seconds=int(e("POLL_SECONDS", "30")),
             short_hours=int(e("SHORT_HOURS", "1")),
             long_hours=int(e("LONG_HOURS", "24")),
             limit=int(e("TRENDING_LIMIT", "100")),
