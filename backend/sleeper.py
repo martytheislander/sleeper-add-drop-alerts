@@ -1,5 +1,5 @@
 """Client for Sleeper's free, read-only API. Non-commercial use; stay well under 1000 calls/min."""
-from __future__ import annotations
+from typing import Dict, Optional
 
 import json
 import os
@@ -15,14 +15,14 @@ class SleeperClient:
         self.session = requests.Session()
         self.timeout = timeout
         self.players_cache = players_cache
-        self._players: dict | None = None
+        self._players: Optional[dict] = None
 
     def _get(self, path: str):
         r = self.session.get(f"{BASE}{path}", timeout=self.timeout)
         r.raise_for_status()
         return r.json()
 
-    def trending(self, sport: str, kind: str, lookback_hours: int, limit: int) -> dict[str, int]:
+    def trending(self, sport: str, kind: str, lookback_hours: int, limit: int) -> Dict[str, int]:
         """kind is 'add' or 'drop'. Returns {player_id: count} across all Sleeper users."""
         data = self._get(
             f"/players/{sport}/trending/{kind}?lookback_hours={lookback_hours}&limit={limit}"

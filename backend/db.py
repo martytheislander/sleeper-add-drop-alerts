@@ -1,4 +1,4 @@
-from __future__ import annotations
+from typing import Dict, Optional
 
 import os
 import sqlite3
@@ -30,7 +30,7 @@ def connect(path: str) -> sqlite3.Connection:
     return conn
 
 
-def save_snapshot(conn, ts: int, kind: str, hours: int, counts: dict[str, int]) -> None:
+def save_snapshot(conn, ts: int, kind: str, hours: int, counts: Dict[str, int]) -> None:
     conn.executemany(
         "INSERT INTO snapshots VALUES (?,?,?,?,?)",
         [(ts, kind, hours, pid, c) for pid, c in counts.items()],
@@ -38,8 +38,8 @@ def save_snapshot(conn, ts: int, kind: str, hours: int, counts: dict[str, int]) 
     conn.commit()
 
 
-def previous_snapshot(conn, kind: str, hours: int, before_ts: int) -> dict[str, int] | None:
-    """The most recent saved snapshot strictly before before_ts, or None on first run."""
+def previous_snapshot(conn, kind: str, hours: int, before_ts: int):
+    """(ts, {player_id: count}) of the latest snapshot before before_ts, or None on first run."""
     row = conn.execute(
         "SELECT MAX(ts) FROM snapshots WHERE kind=? AND window_hours=? AND ts<?",
         (kind, hours, before_ts),
@@ -50,7 +50,7 @@ def previous_snapshot(conn, kind: str, hours: int, before_ts: int) -> dict[str, 
         "SELECT player_id, cnt FROM snapshots WHERE kind=? AND window_hours=? AND ts=?",
         (kind, hours, row[0]),
     ).fetchall()
-    return {pid: c for pid, c in rows}
+    return row[0], {pid: c for pid, c in rows}
 
 
 def last_alert(conn, player_id: str, kind: str):
