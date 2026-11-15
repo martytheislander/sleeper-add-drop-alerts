@@ -19,14 +19,16 @@ Example text:
 `Sleeper ADD surge: Jaylen Warren (RB/PIT) added 142x in 1h (usually ~9/hr, 15.8x), +37 since last check`
 
 ## Setup
+Run these commands from the repository root so the database and player cache stay under `data/`.
+
 ```bash
 python -m venv .venv && source .venv/bin/activate
 pip install -r requirements.txt pytest
 cp .env.example .env
-python -m sleeper_trending --top              # see current movers + ratios; use this to tune thresholds
-python -m sleeper_trending --once --dry-run   # one poll, alerts print to console
-python -m sleeper_trending                    # poll forever (every 30 sec by default)
-pytest
+python -m backend --top             # see current movers + ratios; tune thresholds
+python -m backend --once --dry-run  # one poll, alerts print to console
+python -m backend                   # poll forever (every 30 sec by default)
+pytest backend/tests
 ```
 Add Twilio creds to `.env` to get real texts; with them blank, alerts print to the console.
 Edit `POLL_SECONDS` and the alert thresholds in `.env` to tune polling and notifications.

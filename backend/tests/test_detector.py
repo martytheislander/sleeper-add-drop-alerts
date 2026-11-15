@@ -1,5 +1,5 @@
-from sleeper_trending import db
-from sleeper_trending.detector import find_surges, metrics
+from backend import db
+from backend.detector import find_surges, metrics
 
 NOW = 1_700_000_000
 KW = dict(min_count=50, min_ratio=3.0, cooldown_minutes=180, escalation=2.0, now=NOW)
