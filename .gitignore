@@ -221,3 +221,6 @@ __marimo__/
 
 #madOS Finder Metadata
 .DS_Store
+
+#sqllite data and .json files
+data/*
