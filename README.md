@@ -21,14 +21,15 @@ Example text:
 ## Setup
 ```bash
 python -m venv .venv && source .venv/bin/activate
-pip install -r requirements.txt
+pip install -r requirements.txt pytest
 cp .env.example .env
 python -m sleeper_trending --top              # see current movers + ratios; use this to tune thresholds
 python -m sleeper_trending --once --dry-run   # one poll, alerts print to console
-python -m sleeper_trending                    # poll forever (every 5 min by default)
-python tests/test_detector.py                 # or: pytest
+python -m sleeper_trending                    # poll forever (every 30 sec by default)
+pytest
 ```
 Add Twilio creds to `.env` to get real texts; with them blank, alerts print to the console.
+Edit `POLL_SECONDS` and the alert thresholds in `.env` to tune polling and notifications.
 
 ## Tuning
 - Raise `MIN_COUNT` if you get noise from low-volume players; the right level changes a lot between
@@ -40,7 +41,8 @@ Add Twilio creds to `.env` to get real texts; with them blank, alerts print to t
 
 ## Notes
 - Sleeper's API is free for **non-commercial** use and asks for attribution if you publicly display
-  trending data. Keep it under ~1000 calls/min (this uses a handful per hour).
+  trending data. The default configuration makes 4 trending calls per poll (2 kinds x 2 windows),
+  or about 8 calls/minute at a 30-second poll interval. The player catalog is cached for up to a day.
 - A player absent from the 24h top-N list is treated as having a baseline of 0 (brand new). Raise
   `TRENDING_LIMIT` if you see false positives from mid-tier players.
 - Waiver runs and injury news cause sudden add/drop waves; that's the signal working as intended.
