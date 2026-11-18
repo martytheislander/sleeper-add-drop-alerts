@@ -26,7 +26,7 @@ class Config:
     min_ratio: float = 2.0
     cooldown_minutes: int = 180
     escalation: float = 2.0
-    exclude_positions: Tuple[str, ...] = ("K", "DEF")
+    exclude_positions: Tuple[str, ...] = ("K", "QB")
     max_alerts: int = 5
     twilio_sid: str = ""
     twilio_token: str = ""
@@ -52,7 +52,7 @@ class Config:
             min_ratio=float(e("MIN_RATIO", "2.0")),
             cooldown_minutes=int(e("COOLDOWN_MINUTES", "180")),
             escalation=float(e("ESCALATION_FACTOR", "2.0")),
-            exclude_positions=_list("EXCLUDE_POSITIONS", "K,DEF"),
+            exclude_positions=_list("EXCLUDE_POSITIONS", "K,QB"),
             max_alerts=int(e("MAX_ALERTS_PER_POLL", "5")),
             twilio_sid=e("TWILIO_ACCOUNT_SID", ""),
             twilio_token=e("TWILIO_AUTH_TOKEN", ""),
